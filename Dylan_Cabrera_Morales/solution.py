@@ -30,6 +30,20 @@ class SmartPlayer(Player):
                     moves.append((i,j))
         return moves
     
+    def ordered_moves(self , board : HexBoard) -> list:
+        moves = self.get_valid_moves(board)
+        moves_scores = []
+
+        for move in moves:
+            new_board = board.clone()
+            new_board.place_piece(move[0],move[1],self.player_id)
+            score = self.evaluate(new_board)
+            moves_scores.append((score, move))
+        
+        moves_scores.sort(reverse=True)
+
+        return [m for _,m in moves_scores]
+    
     def get_neighbors(self, r, c, size):
         if r % 2 == 0:
             directions = [(0, -1), (0, 1), (-1, -1), (-1, 0), (1, -1), (1, 0)]

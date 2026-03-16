@@ -1,6 +1,7 @@
 from player import Player
 from board import HexBoard
 import math
+import heapq
 
 class SmartPlayer(Player):
     def play(self, board : HexBoard) -> tuple:
@@ -29,6 +30,31 @@ class SmartPlayer(Player):
                     moves.append((i,j))
         return moves
     
+    def get_neighbors(self, r, c, size):
+        if r % 2 == 0:
+            directions = [(0, -1), (0, 1), (-1, -1), (-1, 0), (1, -1), (1, 0)]
+        else:
+            directions = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, 0), (1, 1)]
+
+        neighbors = []
+        for dr, dc in directions:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < size and 0 <= nc < size:
+                neighbors.append((nr, nc))
+        return neighbors
+        
+
+    
+    def cell_cost(self, board : HexBoard, r, c , player_id):
+        val = board.board[r][c]
+
+        if val == player_id:
+            return 0
+        elif val == 0:
+            return 1
+        else:
+            return 1000
+        
     #Heuristica de conexion
     def conection_score(self , board : HexBoard , player_id : int) -> float:
         score = 0
@@ -40,6 +66,46 @@ class SmartPlayer(Player):
                 elif board.board[i][j] == 0:
                     score += 0.5
         return score
+    
+    def dijkstra_distance(self, board : HexBoard, player_id : int):
+        size = board.size
+        dist = [[math.inf]*size for _ in range(size)]
+        pq = []
+
+        if player_id == 1:
+            for r in range(size):
+                cost = self.cell_cost(board, r, 0, player_id)
+                dist[r][0] = cost
+                heapq.heappush(pq, (cost, r, 0))
+        else:
+            for c in range(size):
+                cost = self.cell_cost(board, 0, c, player_id)
+                dist[0][c] = cost
+                heapq.heappush(pq, (cost, 0, c))
+        
+        while pq:
+            cost, r, c = heapq.heappop()
+
+            if player_id == 1 and c == size - 1:
+                return cost
+            if player_id == 2 and r == size - 1:
+                return cost
+            
+            for nr , nc in self.get_neighbors(r, c, size):
+                new_cost = cost + self.cell_cost(board, nr, nc, player_id)
+                if new_cost < dist[nr][nc]:
+                    dist[nr][nc] = new_cost
+                    heapq.heappush(pq, (new_cost, nr, nc))
+        
+        return math.inf
+    
+    def evaluate_dijkstra(self , board : HexBoard):
+        my_distance = self.dijkstra_distance(board, self.player_id)
+
+        opponent = 2 if self.player_id == 1 else 1
+        opp_distance = self.dijkstra_distance(board, opponent)
+
+        return opp_distance - my_distance
     
     def evaluate(self , board : HexBoard):
         my_score = self.conection_score(board , self.player_id)

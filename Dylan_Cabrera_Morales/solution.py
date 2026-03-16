@@ -98,7 +98,7 @@ class SmartPlayer(Player):
                 heapq.heappush(pq, (cost, 0, c))
         
         while pq:
-            cost, r, c = heapq.heappop()
+            cost, r, c = heapq.heappop(pq)
 
             if player_id == 1 and c == size - 1:
                 return cost
@@ -139,7 +139,7 @@ class SmartPlayer(Player):
             return -1000
         
         if depth == 0:
-            return self.evaluate(board)
+            return self.evaluate_dijkstra(board)
         
         if maximizing:
             max_eval = -math.inf

@@ -2,25 +2,88 @@ from player import Player
 from board import HexBoard
 import math
 import heapq
+import time
 
 class SmartPlayer(Player):
     def play(self, board : HexBoard) -> tuple:
         # Tu lógica aquí
-        depth = 3
+        self.start_time = time.time()
+        self.time_limit = 4.5
+        depth = 1
         best_move = None
+
+        while time.time() - self.start_time < self.time_limit:
+            move = self.search(board, depth)
+
+            if move is not None:
+                best_move = move
+            
+            depth += 1
+        
+        return best_move
+
+    
+    def search(self, board : HexBoard , depth):
         best_value = -math.inf
+        best_move = None
 
-        for move in self.get_valid_moves(board):
+        moves = self.ordered_moves(board)
+
+        for move in moves:
+            if time.time() - self.start_time > self.time_limit:
+                break
+
             new_board = board.clone()
-            new_board.place_piece(move[0],move[1],self.player_id)
+            new_board.place_piece(move[0], move[1], self.player_id)
 
-            value = self.minimax(new_board,depth - 1, False ,-math.inf,math.inf)
+            value = self.minimax(new_board, depth - 1, False, -math.inf, math.inf)
 
             if value > best_value:
                 best_value = value
                 best_move = move
         
         return best_move
+    
+    def minimax(self , board : HexBoard , depth : int , maximizing : bool, alpha : float , beta : float):
+        opponent = 2 if self.player_id == 1 else 1
+
+        if board.check_connection(self.player_id):
+            return 10000
+        
+        if board.check_connection(opponent):
+            return -10000
+        
+        if depth == 0:
+            return self.evaluate_dijkstra(board)
+        
+        if maximizing:
+            max_eval = -math.inf
+            for move in self.ordered_moves(board):
+                new_board = board.clone()
+                new_board.place_piece(move[0],move[1],self.player_id)
+
+                eval = self.minimax(new_board , depth - 1, False ,alpha,beta)
+
+                max_eval = max(max_eval,eval)
+                alpha = max(alpha , eval)
+
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            min_eval = math.inf
+            for move in self.ordered_moves(board):
+                new_board = board.clone()
+                new_board.place_piece(move[0],move[1],opponent)
+
+                eval = self.minimax(new_board , depth - 1 , True , alpha , beta)
+
+                min_eval = min(min_eval,eval)
+                beta = min(beta,eval)
+
+                if beta <= alpha:
+                    break
+            return min_eval
 
     def get_valid_moves(self , board : HexBoard) -> list :
         moves = []
@@ -128,44 +191,3 @@ class SmartPlayer(Player):
         opp_score = self.conection_score(board,opponent)
 
         return my_score - opp_score
-    
-    def minimax(self , board : HexBoard , depth : int , maximizing : bool, alpha : float , beta : float):
-        opponent = 2 if self.player_id == 1 else 1
-
-        if board.check_connection(self.player_id):
-            return 1000
-        
-        if board.check_connection(opponent):
-            return -1000
-        
-        if depth == 0:
-            return self.evaluate_dijkstra(board)
-        
-        if maximizing:
-            max_eval = -math.inf
-            for move in self.get_valid_moves(board):
-                new_board = board.clone()
-                new_board.place_piece(move[0],move[1],self.player_id)
-
-                eval = self.minimax(new_board , depth - 1, False ,alpha,beta)
-
-                max_eval = max(max_eval,eval)
-                alpha = max(alpha , eval)
-
-                if beta <= alpha:
-                    break
-            return max_eval
-        else:
-            min_eval = math.inf
-            for move in self.get_valid_moves(board):
-                new_board = board.clone()
-                new_board.place_piece(move[0],move[1],opponent)
-
-                eval = self.minimax(new_board , depth - 1 , True , alpha , beta)
-
-                min_eval = min(min_eval,eval)
-                beta = min(beta,eval)
-
-                if beta <= alpha:
-                    break
-            return min_eval

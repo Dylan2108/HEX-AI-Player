@@ -8,7 +8,7 @@ class SmartPlayer(Player):
     def play(self, board : HexBoard) -> tuple:
         # Tu lógica aquí
         self.start_time = time.time()
-        self.time_limit = 4.5
+        self.time_limit = 4.2
         depth = 1
         best_move = None
 
@@ -108,10 +108,11 @@ class SmartPlayer(Player):
         return [m for _,m in moves_scores]
     
     def get_neighbors(self, r, c, size):
+        
         if r % 2 == 0:
-            directions = [(0, -1), (0, 1), (-1, -1), (-1, 0), (1, -1), (1, 0)]
-        else:
             directions = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, 0), (1, 1)]
+        else:
+            directions = [(0, -1), (0, 1), (-1, -1), (-1, 0), (1, -1), (1, 0)]
 
         neighbors = []
         for dr, dc in directions:

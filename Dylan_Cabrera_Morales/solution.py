@@ -5,7 +5,22 @@ import heapq
 import time
 
 class SmartPlayer(Player):
+    """
+    Jugador inteligente para HEX basado en:
+    - Minimax con poda Alpha-Beta
+    - Iterative Deepening (limitado por tiempo y profundidad)
+    - Heurística basada en A* (distancia de conexión)
+    - Ordenamiento de movimientos (move ordering)
+    """ 
     def play(self, board : HexBoard) -> tuple:
+        """
+        Método principal que decide la jugada.
+
+        Estrategia:
+        - Si el tablero está vacío → jugar en el centro.
+        - Usar iterative deepening hasta límite de tiempo.
+        - Retornar la mejor jugada encontrada.
+        """
         self.start_time = time.time()
         self.time_limit = 4.2
         depth = 1
@@ -27,7 +42,13 @@ class SmartPlayer(Player):
         return best_move
 
     
-    def search(self, board : HexBoard , depth):
+    def search(self, board : HexBoard , depth : int) -> tuple:
+        """
+        Busca la mejor jugada en la raíz usando minimax.
+
+        - Explora todos los movimientos posibles
+        - Selecciona el de mayor valor
+        """
         best_value = -math.inf
         best_move = None
 
@@ -48,7 +69,15 @@ class SmartPlayer(Player):
         
         return best_move
     
-    def minimax(self , board : HexBoard , depth : int , maximizing : bool, alpha : float , beta : float):
+    def minimax(self , board : HexBoard , depth : int , maximizing : bool, alpha : float , beta : float) -> float:
+        """
+        Implementación de Minimax con poda Alpha-Beta.
+
+        Parámetros:
+        - depth: profundidad restante
+        - maximizing: turno del jugador oponente
+        - alpha, beta: límites de poda
+        """
         opponent = 2 if self.player_id == 1 else 1
 
         if board.check_connection(self.player_id):
@@ -90,6 +119,13 @@ class SmartPlayer(Player):
             return min_eval
 
     def get_valid_moves(self , board : HexBoard) -> list :
+        """
+        Genera movimientos válidos.
+
+        Optimización:
+        - Solo considera casillas vacías que tengan vecinos ocupados.
+        - Reduce significativamente el branching factor.
+        """
         moves = []
         for i in range(board.size):
             for j in range(board.size):
@@ -99,13 +135,22 @@ class SmartPlayer(Player):
         
         return moves
         
-    def has_neighbor(self, board : HexBoard, r, c):
+    def has_neighbor(self, board : HexBoard, r : int, c : int) -> bool:
+        """
+        Verifica si una celda tiene al menos un vecino ocupado.
+        """
         for nr, nc in self.get_neighbors(r, c, board.size):
             if board.board[nr][nc] != 0:
                 return True
         return False
     
     def ordered_moves(self , board : HexBoard) -> list:
+        """
+        Ordena los movimientos según su valor heurístico.
+
+        Mejora la poda alpha-beta:
+        - Se exploran primero los movimientos más prometedores.
+        """
         moves = self.get_valid_moves(board)
         moves_scores = []
 
@@ -119,7 +164,10 @@ class SmartPlayer(Player):
 
         return [m for _,m in moves_scores]
     
-    def get_neighbors(self, r, c, size):
+    def get_neighbors(self, r : int, c : int, size : int) -> list:
+        """
+        Devuelve vecinos de una celda en un tablero HEX (even-r layout).
+        """
         
         if r % 2 == 0:
             directions = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, 0), (1, 1)]
@@ -135,7 +183,14 @@ class SmartPlayer(Player):
         
 
     
-    def cell_cost(self, board : HexBoard, r, c , player_id):
+    def cell_cost(self, board : HexBoard, r : int, c : int, player_id : int) -> int:
+        """
+        Define el costo de una celda para A*:
+
+        - Propia ficha → 0
+        - Vacía → 1
+        - Rival → alto costo (bloqueo)
+        """
         val = board.board[r][c]
 
         if val == player_id:
@@ -145,7 +200,13 @@ class SmartPlayer(Player):
         else:
             return 1000
             
-    def a_star_distance(self, board : HexBoard, player_id : int):
+    def a_star_distance(self, board : HexBoard, player_id : int) -> float:
+        """
+        Calcula la distancia mínima de conexión usando A*.
+
+        Devuelve:
+        - costo mínimo desde un lado al otro del tablero
+        """
         size = board.size
         dist = [[math.inf]*size for _ in range(size)]
         pq = []
@@ -181,12 +242,29 @@ class SmartPlayer(Player):
         return math.inf
     
     def a_star_heuristic(self, r : int, c : int, player_id : int, size : int) -> int:
+        """
+        Heurística admisible para A*:
+
+        - Jugador 1 → distancia horizontal restante
+        - Jugador 2 → distancia vertical restante
+        """
         if player_id == 1:
             return size - 1 - c
         else:
             return size - 1 - r
     
-    def evaluate(self , board : HexBoard):
+    def evaluate(self , board : HexBoard) -> float:
+        """
+        Función de evaluación del tablero.
+
+        Usa A* para calcular:
+        - distancia propia
+        - distancia del oponente
+
+        Score:
+        - positivo → ventaja propia
+        - negativo → ventaja rival
+        """
         my_distance = self.a_star_distance(board, self.player_id)
 
         opponent = 2 if self.player_id == 1 else 1

@@ -210,3 +210,6 @@ board.py
 game.py
 player.py
 random_player.py
+DijkstraPlayer.py
+MonteCarloPlayer.py
+.vscode

@@ -11,8 +11,13 @@ class SmartPlayer(Player):
         self.time_limit = 4.2
         depth = 1
         best_move = None
+        self.max_depth = 5
 
-        while time.time() - self.start_time < self.time_limit:
+        if all(board.board[i][j] == 0 for i in range(board.size) for j in range(board.size)):
+            center = board.size // 2
+            return (center, center)
+        
+        while time.time() - self.start_time < self.time_limit and depth <= self.max_depth:
             move = self.search(board, depth)
 
             if move is not None:
@@ -54,7 +59,7 @@ class SmartPlayer(Player):
             return -10000
         
         if depth == 0:
-            return self.evaluate_dijkstra(board)
+            return self.evaluate(board)
         
         if maximizing:
             max_eval = -math.inf
@@ -86,12 +91,21 @@ class SmartPlayer(Player):
             return min_eval
 
     def get_valid_moves(self , board : HexBoard) -> list :
+        size = board.size
         moves = []
         for i in range(board.size):
             for j in range(board.size):
                 if board.board[i][j] == 0:
-                    moves.append((i,j))
+                    if self.has_neighbor(board, i, j):
+                        moves.append((i,j))
+        
         return moves
+        
+    def has_neighbor(self, board : HexBoard, r, c):
+        for nr, nc in self.get_neighbors(r, c, board.size):
+            if board.board[nr][nc] != 0:
+                return True
+        return False
     
     def ordered_moves(self , board : HexBoard) -> list:
         moves = self.get_valid_moves(board)
@@ -132,20 +146,8 @@ class SmartPlayer(Player):
             return 1
         else:
             return 1000
-        
-    #Heuristica de conexion
-    def conection_score(self , board : HexBoard , player_id : int) -> float:
-        score = 0
-
-        for i in range(board.size):
-            for j in range(board.size):
-                if board.board[i][j] == player_id:
-                    score += 2
-                elif board.board[i][j] == 0:
-                    score += 0.5
-        return score
-    
-    def dijkstra_distance(self, board : HexBoard, player_id : int):
+            
+    def a_star_distance(self, board : HexBoard, player_id : int):
         size = board.size
         dist = [[math.inf]*size for _ in range(size)]
         pq = []
@@ -153,16 +155,18 @@ class SmartPlayer(Player):
         if player_id == 1:
             for r in range(size):
                 cost = self.cell_cost(board, r, 0, player_id)
+                h = self.a_star_heuristic(r, 0, player_id, size)
                 dist[r][0] = cost
-                heapq.heappush(pq, (cost, r, 0))
+                heapq.heappush(pq, (cost + h, cost, r, 0))
         else:
             for c in range(size):
                 cost = self.cell_cost(board, 0, c, player_id)
+                h = self.a_star_heuristic(0, c, player_id, size)
                 dist[0][c] = cost
-                heapq.heappush(pq, (cost, 0, c))
+                heapq.heappush(pq, (cost + h, cost, 0, c))
         
         while pq:
-            cost, r, c = heapq.heappop(pq)
+            f, cost, r, c = heapq.heappop(pq)
 
             if player_id == 1 and c == size - 1:
                 return cost
@@ -173,22 +177,21 @@ class SmartPlayer(Player):
                 new_cost = cost + self.cell_cost(board, nr, nc, player_id)
                 if new_cost < dist[nr][nc]:
                     dist[nr][nc] = new_cost
-                    heapq.heappush(pq, (new_cost, nr, nc))
+                    h = self.a_star_heuristic(nr, nc, player_id, size)
+                    heapq.heappush(pq, (new_cost + h,new_cost, nr, nc))
         
         return math.inf
     
-    def evaluate_dijkstra(self , board : HexBoard):
-        my_distance = self.dijkstra_distance(board, self.player_id)
-
-        opponent = 2 if self.player_id == 1 else 1
-        opp_distance = self.dijkstra_distance(board, opponent)
-
-        return opp_distance - my_distance
+    def a_star_heuristic(self, r : int, c : int, player_id : int, size : int) -> int:
+        if player_id == 1:
+            return size - 1 - c
+        else:
+            return size - 1 - r
     
     def evaluate(self , board : HexBoard):
-        my_score = self.conection_score(board , self.player_id)
+        my_distance = self.a_star_distance(board, self.player_id)
 
         opponent = 2 if self.player_id == 1 else 1
-        opp_score = self.conection_score(board,opponent)
+        opp_distance = self.a_star_distance(board, opponent)
 
-        return my_score - opp_score
+        return opp_distance - my_distance

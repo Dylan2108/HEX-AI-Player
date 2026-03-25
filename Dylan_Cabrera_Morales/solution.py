@@ -6,12 +6,11 @@ import time
 
 class SmartPlayer(Player):
     def play(self, board : HexBoard) -> tuple:
-        # Tu lógica aquí
         self.start_time = time.time()
         self.time_limit = 4.2
         depth = 1
         best_move = None
-        self.max_depth = 5
+        self.max_depth = 2
 
         if all(board.board[i][j] == 0 for i in range(board.size) for j in range(board.size)):
             center = board.size // 2
@@ -91,7 +90,6 @@ class SmartPlayer(Player):
             return min_eval
 
     def get_valid_moves(self , board : HexBoard) -> list :
-        size = board.size
         moves = []
         for i in range(board.size):
             for j in range(board.size):
